@@ -36,6 +36,7 @@ var RegisteredProbes = []func(){
 	usedbyProbeRegister,
 	customTagProbeRegister,
 	blkidProbeRegister,
+	megaRaidProbeRegister,
 }
 
 type registerProbe struct {
