@@ -436,6 +436,17 @@ data:
         state: true
         include: ""
         exclude: "/dev/loop,/dev/fd0,/dev/sr0,/dev/ram,/dev/md,/dev/dm-,/dev/rbd,/dev/zd"
+    # metconfig can be used to decorate the block device with different types of labels
+    # that are available on the node or come in a device properties.
+    # node labels - the node where bd is discovered. A whitlisted label prefixes
+    # attribute labels - a property of the BD can be added as a ndm label as ndm.io/<property>=<property-value>
+    metaconfigs:
+      - key: node-labels
+        name: node labels
+        pattern: ""
+      - key: device-labels
+        name: device labels
+        type: ""
 ---
 # Create NDM Service Account
 apiVersion: v1
@@ -518,10 +529,12 @@ spec:
         args:
         - -v=4
         - --feature-gates="GPTBasedUUID"
+        # Use partition table UUID instead of create single partition to get
+        # partition UUID. Require `GPTBasedUUID` to be enabled with.
+        # - --feature-gates="PartitionTableUUID"
         - --feature-gates="APIService"
         # Detect changes to device size, filesystem and mount-points without restart.
-        # Uncomment the line below to enable the feature.
-        # - --feature-gates="ChangeDetection"
+        #- --feature-gates="ChangeDetection"
         # Default address is 0.0.0.0:9115, do not use quotes around the address
         # - --api-service-address=0.0.0.0:9115
         - --feature-gates="UseOSDisk"
@@ -712,8 +725,7 @@ metadata:
   name: ndm-cluster-exporter-service
   namespace: openebs
   labels:
-    name: openebs-ndm-exporter
-    component: openebs-ndm-cluster-exporter
+    app: openebs-ndm-exporter
 spec:
   clusterIP: None
   ports:
@@ -777,8 +789,7 @@ metadata:
   name: ndm-node-exporter-service
   namespace: openebs
   labels:
-    name: openebs-ndm-exporter
-    component: openebs-ndm-node-exporter
+    app: openebs-ndm-exporter
 spec:
   clusterIP: None
   ports:

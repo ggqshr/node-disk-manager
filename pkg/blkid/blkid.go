@@ -1,3 +1,6 @@
+//go:build (linux && ignore) || cgo
+// +build linux,ignore cgo
+
 /*
 Copyright 2020 The OpenEBS Authors
 
@@ -14,8 +17,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// +build linux, cgo
-
 package blkid
 
 /*
@@ -30,7 +31,10 @@ import (
 )
 
 const (
-	fsTypeIdentifier = "TYPE"
+	fsTypeIdentifier        = "TYPE"
+	labelIdentifier         = "LABEL"
+	partitionTableUUIDIdentifier = "PTUUID"
+	partitionEntryUUIDIdentifier = "PARTUUID"
 )
 
 type DeviceIdentifier struct {
@@ -40,17 +44,38 @@ type DeviceIdentifier struct {
 // GetOnDiskFileSystem returns the filesystem present on the disk by reading from the disk
 // using libblkid
 func (di *DeviceIdentifier) GetOnDiskFileSystem() string {
+	return di.GetTagValue(fsTypeIdentifier)
+}
+
+// GetOnDiskLabel returns the label present on the disk by reading from the disk
+// using libblkid
+func (di *DeviceIdentifier) GetOnDiskLabel() string {
+	return di.GetTagValue(labelIdentifier)
+}
+
+// GetPartitionTableUUID returns the partition table UUID present on the disk by reading from the disk
+// using libblkid
+func (di *DeviceIdentifier) GetPartitionTableUUID() string {
+	return di.GetTagValue(partitionTableUUIDIdentifier)
+}
+
+// GetPartitionEntryUUID returns the UUID of the partition, by reading from the disk using libblkid
+func (di *DeviceIdentifier) GetPartitionEntryUUID() string {
+	return di.GetTagValue(partitionEntryUUIDIdentifier)
+}
+
+func (di *DeviceIdentifier) GetTagValue(tag string) string {
 	var blkidType *C.char
-	blkidType = C.CString(fsTypeIdentifier)
+	blkidType = C.CString(tag)
 	defer C.free(unsafe.Pointer(blkidType))
 
 	var device *C.char
 	device = C.CString(di.DevPath)
 	defer C.free(unsafe.Pointer(device))
 
-	var fstype *C.char
-	fstype = C.blkid_get_tag_value(nil, blkidType, device)
-	defer C.free(unsafe.Pointer(fstype))
+	var tagValue *C.char
+	tagValue = C.blkid_get_tag_value(nil, blkidType, device)
+	defer C.free(unsafe.Pointer(tagValue))
 
-	return C.GoString(fstype)
+	return C.GoString(tagValue)
 }

@@ -22,12 +22,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 
-	apis "github.com/openebs/node-disk-manager/api/v1alpha1"
-	"github.com/openebs/node-disk-manager/pkg/util"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	apis "github.com/openebs/node-disk-manager/api/v1alpha1"
+	"github.com/openebs/node-disk-manager/pkg/util"
 )
 
 // CreateBlockDevice creates the BlockDevice resource in etcd
@@ -87,15 +88,15 @@ func (c *Controller) UpdateBlockDevice(blockDevice apis.BlockDevice, oldBlockDev
 
 	blockDeviceCopy := blockDevice.DeepCopy()
 	if oldBlockDevice == nil {
-		oldBlockDevice = blockDevice.DeepCopy()
+		oldBlockDevice = &apis.BlockDevice{}
 		err = c.Clientset.Get(context.TODO(), client.ObjectKey{
-			Namespace: oldBlockDevice.Namespace,
-			Name:      oldBlockDevice.Name}, oldBlockDevice)
+			Namespace: blockDeviceCopy.Namespace,
+			Name:      blockDeviceCopy.Name}, oldBlockDevice)
 		if err != nil {
 			klog.Errorf("eventcode=%s msg=%s : %v, err:%v rname=%v",
 				"ndm.blockdevice.update.failure",
 				"Failed to update block device : unable to get blockdevice object",
-				oldBlockDevice.ObjectMeta.Name, err, blockDeviceCopy.ObjectMeta.Name)
+				blockDeviceCopy.ObjectMeta.Name, err, blockDeviceCopy.ObjectMeta.Name)
 			return err
 		}
 	}
@@ -250,7 +251,11 @@ func (c *Controller) DeactivateStaleBlockDeviceResource(devices []string) {
 func (c *Controller) PushBlockDeviceResource(oldBlockDevice *apis.BlockDevice,
 	deviceDetails *DeviceInfo) error {
 	deviceDetails.NodeAttributes = c.NodeAttributes
-	deviceAPI := deviceDetails.ToDevice()
+	deviceAPI, err := deviceDetails.ToDevice(c)
+	if err != nil {
+		klog.Error("Failed to create a block device resource CR, Error: ", err)
+		return err
+	}
 	if oldBlockDevice != nil {
 		return c.UpdateBlockDevice(deviceAPI, oldBlockDevice)
 	}
@@ -322,6 +327,9 @@ func mergeMetadata(newMetadata, oldMetadata metav1.ObjectMeta) metav1.ObjectMeta
 
 	// Patch older label with new label. If there is a new key then it will be added
 	// if it is an existing key then value will be overwritten with value from new label
+	if oldMetadata.Labels == nil {
+		oldMetadata.Labels = make(map[string]string)
+	}
 	for key, value := range newMetadata.Labels {
 		oldMetadata.Labels[key] = value
 	}

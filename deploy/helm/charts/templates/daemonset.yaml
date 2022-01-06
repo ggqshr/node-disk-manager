@@ -22,7 +22,7 @@ spec:
       labels:
         {{- include "openebs-ndm.labels" . | nindent 8 }}
         {{- with .Values.ndm.podLabels}}
-        {{ toYaml . | nindent 8 }}
+        {{ toYaml . }}
         {{- end}}
     spec:
       serviceAccountName: {{ template "openebs-ndm.serviceAccountName" . }}
@@ -47,8 +47,8 @@ spec:
 {{- if .Values.featureGates.UseOSDisk.enabled }}
           - --feature-gates={{ .Values.featureGates.UseOSDisk.featureGateFlag }}
 {{- end}}
-{{- if .Values.featureGates.MountChangeDetection.enabled }}
-          - --feature-gates={{ .Values.featureGates.MountChangeDetection.featureGateFlag }}
+{{- if .Values.featureGates.ChangeDetection.enabled }}
+          - --feature-gates={{ .Values.featureGates.ChangeDetection.featureGateFlag }}
 {{- end}}
 {{- end}}
         imagePullPolicy: {{ .Values.ndm.image.pullPolicy }}
