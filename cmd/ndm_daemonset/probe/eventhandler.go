@@ -18,13 +18,14 @@ package probe
 
 import (
 	"errors"
+	
+	"k8s.io/klog"
 
 	"github.com/openebs/node-disk-manager/blockdevice"
 	"github.com/openebs/node-disk-manager/cmd/ndm_daemonset/controller"
 	"github.com/openebs/node-disk-manager/pkg/features"
 	libudevwrapper "github.com/openebs/node-disk-manager/pkg/udev"
 	"github.com/openebs/node-disk-manager/pkg/util"
-	"k8s.io/klog"
 )
 
 // EventAction action type for disk events like attach or detach events
@@ -52,7 +53,9 @@ type ProbeEvent struct {
 // addBlockDeviceEvent fill block device details from different probes and push it to etcd
 func (pe *ProbeEvent) addBlockDeviceEvent(msg controller.EventMessage) {
 	// bdAPIList is the list of all the BlockDevice resources in the cluster
-	bdAPIList, err := pe.Controller.ListBlockDeviceResource(true)
+	// bdAPIList, err := pe.Controller.ListBlockDeviceResource(true)
+	// only list bds of node.
+	bdAPIList, err := pe.Controller.ListBlockDeviceResource(false)
 	if err != nil {
 		klog.Error(err)
 		go Rescan(pe.Controller)
@@ -102,9 +105,13 @@ func (pe *ProbeEvent) addBlockDeviceEvent(msg controller.EventMessage) {
 				continue
 			}
 			deviceInfo := pe.Controller.NewDeviceInfoFromBlockDevice(device)
+			klog.Infof("GPTBasedUUID is disabled and the device type is disk. bd uuid:%s", deviceInfo.UUID)
 
-			existingBlockDeviceResource := pe.Controller.GetExistingBlockDeviceResource(bdAPIList, deviceInfo.UUID)
-			err := pe.Controller.PushBlockDeviceResource(existingBlockDeviceResource, deviceInfo)
+			// old method use uuid check is exists
+			// existingBlockDeviceResource := pe.Controller.GetExistingBlockDeviceResource(bdAPIList, deviceInfo.UUID)
+			// new method use nodeName+wwn check is exists.
+			existingBlockDeviceResourceList := pe.Controller.GetExistingBlockDeviceResourceListUseWWN(bdAPIList, device.DeviceAttributes.WWN)
+			err := pe.Controller.PushBlockDeviceResource(existingBlockDeviceResourceList, deviceInfo)
 			if err != nil {
 				isNeedRescan = true
 				klog.Error(err)
@@ -131,11 +138,14 @@ func (pe *ProbeEvent) deleteBlockDeviceEvent(msg controller.EventMessage) {
 		if isGPTBasedUUIDEnabled {
 			_ = pe.deleteBlockDevice(*device, bdAPIList)
 		} else {
-			if device.DeviceAttributes.DeviceType == blockdevice.BlockDeviceTypePartition {
-				klog.Info("GPTBasedUUID disabled. skip delete block device resource for partition.")
+			// if GPTBasedUUID is disabled and the device type is partition,
+			// the event can be skipped.
+			if device.DeviceAttributes.DeviceType == libudevwrapper.UDEV_PARTITION {
+				klog.Info("GPTBasedUUID disabled. skip deactivate block device resource for partition.")
 				continue
 			}
-			existingBlockDeviceResource := pe.Controller.GetExistingBlockDeviceResource(bdAPIList, device.UUID)
+			// existingBlockDeviceResource := pe.Controller.GetExistingBlockDeviceResource(bdAPIList, device.UUID)
+			existingBlockDeviceResource := pe.Controller.GetExistingBlockDeviceResourceUseWWN(bdAPIList, device.DeviceAttributes.WWN)
 			if existingBlockDeviceResource == nil {
 				// do nothing, may be the disk was filtered, or it was not created
 				isDeactivated = false

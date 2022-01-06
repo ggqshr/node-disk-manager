@@ -217,6 +217,27 @@ docker.ndm: build.ndm Dockerfile.ndm
 	@echo "--> Build docker image: $(DOCKER_IMAGE_NDM)"
 	@echo
 
+.PHONY: docker.ndm.allinone
+docker.ndm.allinone:
+	@echo "--> Building docker image for ndm-daemonset..."
+	@docker build -t "$(DOCKER_IMAGE_NDM)" ${DBUILD_ARGS} -f Dockerfile.ndm.allinone .
+	@echo "--> Build docker image: $(DOCKER_IMAGE_NDM)"
+	@echo
+
+.PHONY: docker.ndm.test
+docker.ndm.test:
+	@echo "--> Building docker image for ndm unit test..."
+	@docker build -t ndm:test ${DBUILD_ARGS} -f Dockerfile.test .
+	@echo "--> Build docker image: ndm:test"
+	@echo "--> You Can use docker run --rm --privileged ndm:test make docker-test"
+	@echo
+
+.PHONY: docker-test
+docker-test: 	vet fmt
+	@echo "--> Running go test";
+	@pwd
+	@build/test.sh ${XC_ARCH}
+	
 .PHONY: build.ndo
 build.ndo:
 	@echo '--> Building node-disk-operator binary...'

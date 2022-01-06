@@ -420,7 +420,7 @@ func TestPushDeviceResource(t *testing.T) {
 	cdr1, err1 := fakeController.GetBlockDevice(fakeDeviceUID)
 
 	// Pass old blockdevice resource as 1st argument then it updates resource
-	fakeController.PushBlockDeviceResource(cdr1, deviceDetails)
+	fakeController.PushBlockDeviceResource([]apis.BlockDevice{*cdr1}, deviceDetails)
 
 	// Retrieve disk resource
 	cdr2, err2 := fakeController.GetBlockDevice(fakeDeviceUID)
