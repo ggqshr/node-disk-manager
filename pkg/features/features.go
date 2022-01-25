@@ -70,10 +70,10 @@ var supportedFeatures = []Feature{
 
 // defaultFeatureGates is the default features that will be applied to the application
 var defaultFeatureGates = map[Feature]bool{
-	GPTBasedUUID:       true,
-	APIService:         false,
-	UseOSDisk:          false,
-	ChangeDetection:    false,
+	GPTBasedUUID:    false,
+	APIService:      false,
+	UseOSDisk:       false,
+	ChangeDetection: false,
 	PartitionTableUUID: false,
 }
 

@@ -19,6 +19,8 @@ package probe
 import (
 	"errors"
 
+	"golang.org/x/sync/semaphore"
+
 	"github.com/openebs/node-disk-manager/blockdevice"
 	"github.com/openebs/node-disk-manager/cmd/ndm_daemonset/controller"
 	"github.com/openebs/node-disk-manager/pkg/features"
@@ -26,7 +28,6 @@ import (
 	libudevwrapper "github.com/openebs/node-disk-manager/pkg/udev"
 	"github.com/openebs/node-disk-manager/pkg/udevevent"
 	"github.com/openebs/node-disk-manager/pkg/util"
-	"golang.org/x/sync/semaphore"
 
 	"k8s.io/klog"
 )
@@ -201,6 +202,8 @@ func (up *udevProbe) scan() error {
 			} else {
 				uuid := newUdevice.GetUid()
 				disksUid = append(disksUid, uuid)
+				deviceDetails.DeviceAttributes.WWN = newUdevice.GetPropertyValue(libudevwrapper.UDEV_WWN)
+				deviceDetails.DeviceAttributes.Serial = newUdevice.GetPropertyValue(libudevwrapper.UDEV_SERIAL)
 				deviceDetails.UUID = uuid
 			}
 			udevDeviceType := newUdevice.GetPropertyValue(libudevwrapper.UDEV_DEVTYPE)
@@ -328,6 +331,10 @@ func (up *udevProbe) FillBlockDeviceDetails(blockDevice *blockdevice.BlockDevice
 	// filesystem info of the attached device. Only filesystem data will be filled in the struct,
 	// as the mountpoint related information will be filled in by the mount probe
 	blockDevice.FSInfo.FileSystem = udevDiskDetails.FileSystem
+	if blockDevice.FSInfo.FileSystem != "" {
+		klog.V(4).Infof("device: %s, FileSystem: %s filled by udev probe",
+			blockDevice.DevPath, blockDevice.FSInfo.FileSystem)
+	}
 
 	blockDevice.PartitionInfo.PartitionTableType = udevDiskDetails.PartitionTableType
 

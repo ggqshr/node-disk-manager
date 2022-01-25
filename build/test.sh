@@ -31,7 +31,7 @@ if [ "$ARCH" != "amd64" ]; then
 fi
 
 echo "" > coverage.txt
-PACKAGES=$(go list ./... | grep -v '/vendor/\|/pkg/apis/\|/pkg/client/\|integration_test')
+PACKAGES=$(go list ./... | grep -v '/vendor/\|api-service/\|/pkg/apis/\|/pkg/client/\|integration_test')
 for d in $PACKAGES; do
 	go test -coverprofile=profile.out -covermode=atomic "$d"
 	if [ -f profile.out ]; then

@@ -60,7 +60,7 @@ func (pe *ProbeEvent) addBlockDeviceToHierarchyCache(bd blockdevice.BlockDevice)
 	return deviceAlreadyExistsInCache
 }
 
-// addBlockDevice processed when an add event is received for a device
+// addBlockDevice processed when an add event is received for a device. only use for gpt uuid.
 func (pe *ProbeEvent) addBlockDevice(bd blockdevice.BlockDevice, bdAPIList *apis.BlockDeviceList) error {
 
 	// handle devices that are not managed by NDM

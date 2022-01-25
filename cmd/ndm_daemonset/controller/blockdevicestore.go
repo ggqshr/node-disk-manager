@@ -151,8 +151,9 @@ func (c *Controller) GetBlockDevice(name string) (*apis.BlockDevice, error) {
 func (c *Controller) DeleteBlockDevice(name string) {
 	blockDevice := &apis.BlockDevice{
 		ObjectMeta: metav1.ObjectMeta{
-			Labels: make(map[string]string),
-			Name:   name,
+			Labels:    make(map[string]string),
+			Namespace: c.Namespace,
+			Name:      name,
 		},
 	}
 
@@ -227,6 +228,35 @@ func (c *Controller) GetExistingBlockDeviceResource(blockDeviceList *apis.BlockD
 	return nil
 }
 
+// GetExistingBlockDeviceResourceUseWWN returns the existing blockdevice resource if it is
+// present in etcd if not it returns nil pointer.
+func (c *Controller) GetExistingBlockDeviceResourceUseWWN(blockDeviceList *apis.BlockDeviceList,
+	wwn string) *apis.BlockDevice {
+
+	hostname := c.NodeAttributes[HostNameKey]
+	for _, item := range blockDeviceList.Items {
+		if hostname == item.Spec.NodeAttributes.NodeName && wwnExistsInDevLinkIds(item.Spec.DevLinks, wwn) {
+			return &item
+		}
+	}
+	return nil
+}
+
+// GetExistingBlockDeviceResourceListUseWWN returns the existing blockdevice resource if it is
+// present in etcd if not it returns nil pointer.
+func (c *Controller) GetExistingBlockDeviceResourceListUseWWN(blockDeviceList *apis.BlockDeviceList,
+	wwn string) []apis.BlockDevice {
+	bdList := make([]apis.BlockDevice, 0)
+	hostname := c.NodeAttributes[HostNameKey]
+	for _, item := range blockDeviceList.Items {
+		if hostname == item.Spec.NodeAttributes.NodeName && wwnExistsInDevLinkIds(item.Spec.DevLinks, wwn) {
+			klog.V(4).Infof("exists bd: %s", item.Name)
+			bdList = append(bdList, item)
+		}
+	}
+	return bdList
+}
+
 // DeactivateStaleBlockDeviceResource deactivates the stale entry from etcd.
 // It gets list of resources which are present in system and queries etcd to get
 // list of active resources. Active resource which is present in etcd not in
@@ -248,7 +278,7 @@ func (c *Controller) DeactivateStaleBlockDeviceResource(devices []string) {
 // PushBlockDeviceResource is a utility function which checks old blockdevice resource
 // present or not. If it presents in etcd then it updates the resource
 // else it creates new blockdevice resource in etcd
-func (c *Controller) PushBlockDeviceResource(oldBlockDevice *apis.BlockDevice,
+func (c *Controller) PushBlockDeviceResource(oldBlockDeviceList []apis.BlockDevice,
 	deviceDetails *DeviceInfo) error {
 	deviceDetails.NodeAttributes = c.NodeAttributes
 	deviceAPI, err := deviceDetails.ToDevice(c)
@@ -256,6 +286,19 @@ func (c *Controller) PushBlockDeviceResource(oldBlockDevice *apis.BlockDevice,
 		klog.Error("Failed to create a block device resource CR, Error: ", err)
 		return err
 	}
+
+	var oldBlockDevice *apis.BlockDevice
+	for _, v := range oldBlockDeviceList {
+		klog.V(4).Infof("processing existing bd: %s", v.Name)
+		if v.Status.ClaimState != apis.BlockDeviceClaimed && v.Status.State != apis.BlockDeviceActive {
+			klog.V(4).Infof("device is duplicate, unclaimed and inactive will deleting bd: %s", v.Name)
+			c.DeleteBlockDevice(v.Name)
+			continue
+		} else {
+			oldBlockDevice = v.DeepCopy()
+		}
+	}
+
 	if oldBlockDevice != nil {
 		return c.UpdateBlockDevice(deviceAPI, oldBlockDevice)
 	}
@@ -344,4 +387,17 @@ func mergeMetadata(newMetadata, oldMetadata metav1.ObjectMeta) metav1.ObjectMeta
 	}
 
 	return oldMetadata
+}
+
+func wwnExistsInDevLinkIds(devLinks []apis.DeviceDevLink, wwn string) bool {
+	for _, devLink := range devLinks {
+		if devLink.Kind == "by-id" {
+			for _, linkId := range devLink.Links {
+				if linkId == "/dev/disk/by-id/wwn-"+wwn {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
