@@ -409,7 +409,7 @@ func processUdevEvent(event udevevent.UdevEvent) controller.EventMessage {
 	// and only uses the dev path field to fetch the bd from the controller cache.
 	// Fill only dev path and do not process further in case of change events.
 	if action == udevevent.EventTypeChange {
-		eventMessage.RequestedProbes = []string{udevProbeName, sysfsProbeName}
+		eventMessage.RequestedProbes = []string{udevProbeName, sysfsProbeName, usedbyProbeName}
 		goto event_dispatch
 	}
 	// This is the legacy uuid. It will be overwritten in the event handler.
