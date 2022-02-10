@@ -339,6 +339,7 @@ func mergeBlockDeviceData(newBD, oldBD apis.BlockDevice) *apis.BlockDevice {
 		oldBD.Spec.Capacity.Storage = newBD.Spec.Capacity.Storage
 		oldBD.Spec.Path = newBD.Spec.Path
 		oldBD.Spec.DevLinks = newBD.Spec.DevLinks
+		oldBD.Spec.FileSystem = newBD.Spec.FileSystem
 		oldBD.Status.State = newBD.Status.State
 	} else {
 		oldBD.Spec = newBD.Spec
