@@ -108,6 +108,8 @@ func (m *Metrics) withErrorRequest() *Metrics {
 
 // SetMetrics is used to set the prometheus metrics to respective fields
 func (m *Metrics) SetMetrics(blockDevices []blockdevice.BlockDevice) {
+	// clear old gaugeVec metrics
+	m.blockDeviceState.Reset()
 	for _, blockDevice := range blockDevices {
 		// do not report metrics for sparse devices
 		if blockDevice.DeviceAttributes.DeviceType == blockdevice.SparseBlockDeviceType {
